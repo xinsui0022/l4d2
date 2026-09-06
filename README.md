@@ -15,7 +15,7 @@
 
 ## 维护
 
-服务器运行用户与路径为 `/home/l4d2`。目前脚本含当前服务器地址与管理员 Steam ID；迁移前按 [RESTORE.md](RESTORE.md) 修改。
+服务器运行用户与路径为 `/home/l4d2`。脚本使用服务器地址与管理员 Steam ID 占位符；部署或迁移前按 [RESTORE.md](RESTORE.md) 修改。
 
 已有基础服务时：将 `custom/`、`deploy/` 同步到 `/home/l4d2/`，运行 `bash /home/l4d2/deploy/build-plugins.sh`，再执行 `python3 /home/l4d2/deploy/apply-customization.py`。确认空服后重启 `systemctl --user restart l4d2`。
 
