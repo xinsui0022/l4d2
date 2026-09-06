@@ -7,17 +7,19 @@
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
 
-public Plugin myinfo = {name="Jiaojiedi Tank Tools", author="l4d2 server", description="Opening tank handoff and root-only practice tools", version="1.0.0"};
+public Plugin myinfo = {name="Jiaojiedi Tank Tools", author="l4d2 server", description="Opening tank handoff and root-only practice tools", version="1.1.0"};
 float deadline[MAXPLAYERS+1];
 bool offered[MAXPLAYERS+1], spent[MAXPLAYERS+1], passing;
 TopMenu adminMenu;
 ConVar window;
+Menu passMenu[MAXPLAYERS+1];
 
 bool Tank(int c) { return c>0 && c<=MaxClients && IsClientInGame(c) && GetClientTeam(c)==3 && IsPlayerAlive(c) && GetEntProp(c,Prop_Send,"m_zombieClass")==8; }
 bool Target(int c,int owner) { return c>0 && c<=MaxClients && c!=owner && IsClientInGame(c) && !IsFakeClient(c) && GetClientTeam(c)==3 && !Tank(c); }
 public void OnPluginStart()
 {
-    window=CreateConVar("jjd_tank_pass_window","15","Opening handoff window in seconds",0,true,3.0,true,30.0);
+    window=CreateConVar("jjd_tank_pass_window","10","Opening handoff window in seconds",0,true,3.0,true,30.0);
+    CreateTimer(1.0,Countdown,_,TIMER_REPEAT);
     HookEvent("tank_spawn", SpawnEvent);
     HookEvent("round_start", RoundStart);
     RegConsoleCmd("sm_pass", PassCommand);
@@ -60,16 +62,36 @@ public Action Offer(Handle timer,any userid)
 }
 public void Damage(int victim,int attacker,int inflictor,float damage,int type)
 {
-    // Once either side has engaged in damage, handoff is no longer an opening choice.
-    if(damage<=0.0) return;
-    if(Tank(victim)) spent[victim]=true;
-    if(Tank(attacker)) spent[attacker]=true;
+    // Only a damaging claw hit on a survivor commits the player to this Tank.
+    if(damage<=0.0 || !Tank(attacker) || inflictor!=attacker || victim<1 || victim>MaxClients || !IsClientInGame(victim) || GetClientTeam(victim)!=2) return;
+    char weapon[64];GetClientWeapon(attacker,weapon,sizeof(weapon));
+    if(StrEqual(weapon,"weapon_tank_claw")) LockPass(attacker);
 }
-bool CanPass(int c) { return Tank(c) && !IsFakeClient(c) && offered[c] && !spent[c] && GetGameTime()<=deadline[c] && !(GetEntityFlags(c)&FL_ONFIRE); }
+public void L4D_TankRock_OnRelease_Post(int tank,int rock,const float pos[3],const float ang[3],const float vel[3],const float rot[3])
+{
+    if(Tank(tank)) LockPass(tank);
+}
+void ClosePass(int c)
+{
+    Menu menu=passMenu[c];passMenu[c]=null;
+    if(menu!=null) menu.Cancel();
+}
+void LockPass(int c) { spent[c]=true;ClosePass(c); }
+public void OnClientDisconnect(int c) { ClosePass(c); }
+public Action Countdown(Handle timer)
+{
+    for(int c=1;c<=MaxClients;c++) if(passMenu[c]!=null){
+        if(CanPass(c)) ShowPass(c);else ClosePass(c);
+    }
+    return Plugin_Continue;
+}
+bool CanPass(int c) { return Tank(c) && !IsFakeClient(c) && offered[c] && !spent[c] && GetGameTime()<deadline[c]; }
 void ShowPass(int c)
 {
+    ClosePass(c);
     Menu menu=new Menu(PassHandler);
-    menu.SetTitle("Tank 开场选择（%.0f 秒内）\n超时默认自己玩",deadline[c]-GetGameTime());
+    passMenu[c]=menu;
+    menu.SetTitle("Tank 开场选择（剩余 %d 秒）\n超时默认自己玩",RoundToCeil(deadline[c]-GetGameTime()));
     char id[16],name[MAX_NAME_LENGTH]; int count;
     for(int i=1;i<=MaxClients;i++) if(Target(i,c)){
         IntToString(GetClientUserId(i),id,sizeof(id));GetClientName(i,name,sizeof(name));menu.AddItem(id,name);count++;
@@ -81,12 +103,12 @@ void ShowPass(int c)
 }
 public Action PassCommand(int c,int args)
 {
-    if(c>0){if(CanPass(c)) ShowPass(c);else ReplyToCommand(c,"[交界地] 只能在接克后 15 秒内、未交战时选择一次传克。");}
+    if(c>0){if(CanPass(c)) ShowPass(c);else ReplyToCommand(c,"[交界地] 只能在开场 %.0f 秒内、未拳击命中生还者且未投石时传克一次。",window.FloatValue);}
     return Plugin_Handled;
 }
 public int PassHandler(Menu menu,MenuAction action,int c,int item)
 {
-    if(action==MenuAction_End){delete menu;return 0;}
+    if(action==MenuAction_End){for(int i=1;i<=MaxClients;i++)if(passMenu[i]==menu)passMenu[i]=null;delete menu;return 0;}
     if(action!=MenuAction_Select) return 0;
     char id[16];menu.GetItem(item,id,sizeof(id));
     if(StrEqual(id,"self")){spent[c]=true;return 0;}
