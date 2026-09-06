@@ -7,7 +7,7 @@
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
 
-public Plugin myinfo = {name="Jiaojiedi Tank Tools", author="Jiaojiedi", description="Opening tank handoff and root-only practice tools", version="1.1.0"};
+public Plugin myinfo = {name="Jiaojiedi Tank Tools", author="Jiaojiedi", description="Opening tank handoff and root-only practice tools", version="1.1.1"};
 float deadline[MAXPLAYERS+1];
 bool offered[MAXPLAYERS+1], spent[MAXPLAYERS+1], passing;
 TopMenu adminMenu;
@@ -143,6 +143,7 @@ bool Root(int c) { return c>0 && IsClientInGame(c) && CheckCommandAccess(c,"jjd_
 public Action SpawnCommand(int c,int args)
 {
     if(!Root(c)) return Plugin_Handled;
+    for(int i=1;i<=MaxClients;i++)if(Tank(i)){ReplyToCommand(c,"[交界地] 场上已有 Tank，请先处理现有 Tank 再补克，避免共享控制次数互相影响。");return Plugin_Handled;}
     float eye[3],ang[3],pos[3],normal[3];GetClientEyePosition(c,eye);GetClientEyeAngles(c,ang);
     Handle ray=TR_TraceRayFilterEx(eye,ang,MASK_PLAYERSOLID,RayType_Infinite,TraceFilter,c);
     if(!TR_DidHit(ray)){delete ray;ReplyToCommand(c,"[交界地] 请瞄准附近空旷地面。");return Plugin_Handled;}
@@ -154,7 +155,7 @@ public Action SpawnCommand(int c,int args)
     bool blocked=TR_StartSolid(hull)||TR_AllSolid(hull)||TR_DidHit(hull);delete hull;
     if(blocked){ReplyToCommand(c,"[交界地] 空间不足，请换一个空旷位置。");return Plugin_Handled;}
     ang[0]=0.0;ang[2]=0.0;
-    int tank=L4D2_SpawnTank(pos,ang);
+    int tank=SpawnPracticeTank(pos,ang);
     if(Tank(tank)){MarkStatsPractice();LogAction(c,tank,"Admin spawned Tank at %.1f %.1f %.1f",pos[0],pos[1],pos[2]);PrintToChatAll("[交界地] 管理员 %N 补充了一只 Tank。",c);}
     else ReplyToCommand(c,"[交界地] 生成失败，请检查当前模式与位置。");
     return Plugin_Handled;
@@ -176,7 +177,28 @@ public int TakeHandler(Menu menu,MenuAction action,int c,int item)
     char id[16];menu.GetItem(item,id,sizeof(id));int bot=GetClientOfUserId(StringToInt(id));
     if(!Tank(bot)||!IsFakeClient(bot))return 0;
     if(IsPlayerAlive(c)){if(!GetEntProp(c,Prop_Send,"m_isGhost"))L4D_ReplaceWithBot(c);ForcePlayerSuicide(c);}
-    MarkStatsPractice();L4D_TakeOverZombieBot(c,bot);LogAction(c,bot,"Admin took over AI Tank");return 0;
+    MarkStatsPractice();TakePracticeTank(c,bot);LogAction(c,bot,"Admin took over AI Tank");return 0;
+}
+// The Director counter is global, not per Tank. A new admin-spawned Tank must
+// not inherit a previous Tank's spent controls. Natural Director spawns are untouched.
+int SpawnPracticeTank(const float pos[3],const float ang[3])
+{
+    for(int i=1;i<=MaxClients;i++)if(Tank(i))return -1;
+    int previous=L4D2Direct_GetTankPassedCount();
+    L4D2Direct_SetTankPassedCount(0);
+    int tank=L4D2_SpawnTank(pos,ang);
+    if(Tank(tank))L4D2Direct_SetTankPassedCount(IsFakeClient(tank)?0:1);
+    else L4D2Direct_SetTankPassedCount(previous);
+    return tank;
+}
+void TakePracticeTank(int client,int bot)
+{
+    int previous=L4D2Direct_GetTankPassedCount();
+    L4D_TakeOverZombieBot(client,bot);
+    // First human assignment is control 1; taking over an existing AI does not
+    // consume an additional control or refund an already-spent control.
+    int expected=Tank(client)&&previous<1?1:previous;
+    L4D2Direct_SetTankPassedCount(expected);
 }
 public void OnLibraryRemoved(const char[] name){if(StrEqual(name,"adminmenu"))adminMenu=null;}
 public void OnAdminMenuReady(Handle handle)
@@ -195,7 +217,7 @@ public void AdminItem(TopMenu top,TopMenuAction action,TopMenuObject objectId,in
 public Action Status(int args)
 {
     int tanks;for(int i=1;i<=MaxClients;i++)if(Tank(i))tanks++;
-    PrintToServer("JJD_TANK window=%.0f root_only=1 tanks=%d",window.FloatValue,tanks);return Plugin_Handled;
+    PrintToServer("JJD_TANK version=1.1.1 window=%.0f root_only=1 tanks=%d engine_passes=%d",window.FloatValue,tanks,L4D2Direct_GetTankPassedCount());return Plugin_Handled;
 }
 
 void MarkStatsPractice(){ConVar cv=FindConVar("jjd_stats_practice");if(cv!=null)cv.SetInt(1);}
