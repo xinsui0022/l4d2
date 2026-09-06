@@ -20,8 +20,8 @@ admins = SM / 'configs/admins_simple.ini'
 text = admins.read_text()
 text = '\n'.join(line for line in text.splitlines()
     if not re.match(r'^\s*"(?:STEAM_[01]:1:YOUR_ACCOUNT_ID|YOUR_STEAM64)"', line)
-    and line.strip() != '// l4d2: YOUR_STEAM64')
-admins.write_text(text.rstrip() + '\n\n// l4d2: YOUR_STEAM64\n"STEAM_1:0:YOUR_ACCOUNT_ID" "99:z"\n')
+    and line.strip() != '// Administrator: YOUR_STEAM64')
+admins.write_text(text.rstrip() + '\n\n// Administrator: YOUR_STEAM64\n"STEAM_1:0:YOUR_ACCOUNT_ID" "99:z"\n')
 
 # Stock basevotes owns an admin-only sm_vote; the public menu replaces it.
 old = SM / 'plugins/basevotes.smx'
@@ -52,3 +52,5 @@ for name in ('l4d2.service', 'l4d2-motd.service', 'l4d2-idle-check.service', 'l4
 subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True)
 subprocess.run(['systemctl', '--user', 'enable', '--now', 'l4d2-motd.service', 'l4d2-idle-check.timer'], check=True)
 print('CUSTOMIZATION_APPLIED; restart the game when empty. ZoneMod locks plugin hot reloads.')
+
+subprocess.run(['python3', str(BASE / 'deploy/install-stats.py')], check=True)

@@ -1,0 +1,9 @@
+[Unit]
+Description=Private L4D2 configuration and SQLite backup
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/deploy/backup-server.py
+UMask=0077
+TimeoutStartSec=15min
+Nice=10
+IOSchedulingClass=idle

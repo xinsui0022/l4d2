@@ -7,7 +7,7 @@
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
 
-public Plugin myinfo = {name="Jiaojiedi Tank Tools", author="l4d2 server", description="Opening tank handoff and root-only practice tools", version="1.1.0"};
+public Plugin myinfo = {name="Jiaojiedi Tank Tools", author="Jiaojiedi", description="Opening tank handoff and root-only practice tools", version="1.1.0"};
 float deadline[MAXPLAYERS+1];
 bool offered[MAXPLAYERS+1], spent[MAXPLAYERS+1], passing;
 TopMenu adminMenu;
@@ -155,7 +155,7 @@ public Action SpawnCommand(int c,int args)
     if(blocked){ReplyToCommand(c,"[交界地] 空间不足，请换一个空旷位置。");return Plugin_Handled;}
     ang[0]=0.0;ang[2]=0.0;
     int tank=L4D2_SpawnTank(pos,ang);
-    if(Tank(tank)){LogAction(c,tank,"Admin spawned Tank at %.1f %.1f %.1f",pos[0],pos[1],pos[2]);PrintToChatAll("[交界地] 管理员 %N 补充了一只 Tank。",c);}
+    if(Tank(tank)){MarkStatsPractice();LogAction(c,tank,"Admin spawned Tank at %.1f %.1f %.1f",pos[0],pos[1],pos[2]);PrintToChatAll("[交界地] 管理员 %N 补充了一只 Tank。",c);}
     else ReplyToCommand(c,"[交界地] 生成失败，请检查当前模式与位置。");
     return Plugin_Handled;
 }
@@ -176,7 +176,7 @@ public int TakeHandler(Menu menu,MenuAction action,int c,int item)
     char id[16];menu.GetItem(item,id,sizeof(id));int bot=GetClientOfUserId(StringToInt(id));
     if(!Tank(bot)||!IsFakeClient(bot))return 0;
     if(IsPlayerAlive(c)){if(!GetEntProp(c,Prop_Send,"m_isGhost"))L4D_ReplaceWithBot(c);ForcePlayerSuicide(c);}
-    L4D_TakeOverZombieBot(c,bot);LogAction(c,bot,"Admin took over AI Tank");return 0;
+    MarkStatsPractice();L4D_TakeOverZombieBot(c,bot);LogAction(c,bot,"Admin took over AI Tank");return 0;
 }
 public void OnLibraryRemoved(const char[] name){if(StrEqual(name,"adminmenu"))adminMenu=null;}
 public void OnAdminMenuReady(Handle handle)
@@ -197,3 +197,5 @@ public Action Status(int args)
     int tanks;for(int i=1;i<=MaxClients;i++)if(Tank(i))tanks++;
     PrintToServer("JJD_TANK window=%.0f root_only=1 tanks=%d",window.FloatValue,tanks);return Plugin_Handled;
 }
+
+void MarkStatsPractice(){ConVar cv=FindConVar("jjd_stats_practice");if(cv!=null)cv.SetInt(1);}

@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS schema_version(version INTEGER PRIMARY KEY);
+INSERT OR IGNORE INTO schema_version VALUES(1);
+CREATE TABLE IF NOT EXISTS players(steam TEXT PRIMARY KEY,name TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS halves(id TEXT PRIMARY KEY,map TEXT NOT NULL,finished INTEGER NOT NULL,eligible INTEGER NOT NULL,reason TEXT NOT NULL,rules INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS contributions(half TEXT NOT NULL,steam TEXT NOT NULL,score INTEGER NOT NULL,common INTEGER NOT NULL,si_damage INTEGER NOT NULL,tank_damage INTEGER NOT NULL,saves INTEGER NOT NULL,revives INTEGER NOT NULL,infected_damage INTEGER NOT NULL,tank_attack INTEGER NOT NULL,friendly INTEGER NOT NULL,si_kills INTEGER NOT NULL,PRIMARY KEY(half,steam));
+CREATE VIEW IF NOT EXISTS ranking AS SELECT p.steam,p.name,SUM(c.score) AS score,COUNT(*) AS halves,SUM(c.common) AS common,SUM(c.si_damage) AS si_damage,SUM(c.tank_damage) AS tank_damage,SUM(c.saves) AS saves,SUM(c.revives) AS revives,SUM(c.infected_damage) AS infected_damage,SUM(c.tank_attack) AS tank_attack,SUM(c.friendly) AS friendly,SUM(c.si_kills) AS si_kills FROM contributions c JOIN players p ON p.steam=c.steam JOIN halves h ON h.id=c.half WHERE h.eligible=1 GROUP BY p.steam;

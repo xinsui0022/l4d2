@@ -33,3 +33,8 @@ GitHub：源码、配置生成器、版本与恢复说明。
 - 传克行为参考调研：https://github.com/raziEiL/l4d_tank_pass 。本服使用独立的 `jjd_tank_tools`，不叠加安装上游 Tank Pass。
 
 权限边界：SourceMod 命令注册和内部检查均要求 root 权限才允许刷克；普通玩家只能操作自己的开场传克菜单。服务端测试不能替代真人多客户端实测。
+
+
+## 积分、自动备份与新云恢复
+
+已加入 SQLite 贡献排行（!rank / !top / !stats）、每日完整备份、Windows 登录后/每小时主动同步，以及新云安装与恢复脚本。详细规则、使用方式和边界见 [STATS_AND_RECOVERY.md](STATS_AND_RECOVERY.md)。
