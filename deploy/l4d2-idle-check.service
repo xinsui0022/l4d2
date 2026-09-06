@@ -1,0 +1,8 @@
+[Unit]
+Description=Check whether L4D2 has been empty for 30 minutes
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/systemctl --user is-active --quiet l4d2.service
+ExecStart=/usr/bin/python3 /home/l4d2/deploy/idle-watch.py
+TimeoutStartSec=45

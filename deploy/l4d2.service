@@ -1,0 +1,24 @@
+[Unit]
+Description=l4d2 L4D2 ZoneMod 4v4 server
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=/home/l4d2/steamcmd/l4d2
+Environment=HOME=/home/l4d2
+ExecStart=/home/l4d2/steamcmd/l4d2/srcds_run -game left4dead2 -console -norestart -port 27015 -tickrate 100 +ip 0.0.0.0 +map c2m1_highway +mp_gamemode versus
+ExecStartPost=/usr/bin/python3 /home/l4d2/deploy/ensure-mode.py
+Restart=always
+RestartSec=8
+KillSignal=SIGINT
+TimeoutStartSec=120
+TimeoutStopSec=25
+LimitNOFILE=65536
+LimitCORE=0
+UMask=0077
+StandardOutput=append:/home/l4d2/logs/server-console.log
+StandardError=append:/home/l4d2/logs/server-console.log
+
+[Install]
+WantedBy=default.target

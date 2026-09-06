@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll L4D2 idle state with wall-clock time
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=l4d2-idle-check.service
+
+[Install]
+WantedBy=timers.target

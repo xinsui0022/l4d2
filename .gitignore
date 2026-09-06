@@ -1,0 +1,23 @@
+# Local SSH credentials: never commit or include in deployment archives.
+/id_ed25519_l4d2_huawei
+/id_ed25519_l4d2_huawei.pub
+/known_hosts_l4d2
+*.pem
+*.ppk
+private_server.cfg
+/backups/
+/verification/
+/ssh_config_l4d2
+/install_public_key.sh
+*.reference.sp
+*.smx
+__pycache__/
+*.pyc
+*.tar.gz
+*.zip
+idle-state.json
+admins_simple.ini
+banned_*.cfg
+/l4d2_mod/
+/l4d2_server/
+/.public-export/

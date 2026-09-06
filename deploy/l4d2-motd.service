@@ -1,0 +1,12 @@
+[Unit]
+Description=Jiaojiedi game welcome assets
+
+[Service]
+ExecStart=/usr/bin/python3 /home/l4d2/deploy/motd-server.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=default.target
