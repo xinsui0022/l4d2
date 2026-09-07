@@ -10,9 +10,9 @@
 #define ADMIN_ID "STEAM_1:0:YOUR_ACCOUNT_ID"
 
 public Plugin myinfo = {
-    name = "Jiaojiedi Server Tools", author = "l4d2 server",
+    name = "Jiaojiedi Server Tools", author = "Jiaojiedi server",
     description = "Welcome, campaign votes, fresh matches and idle maintenance",
-    version = "1.0.0", url = ""
+    version = "1.1.0", url = ""
 };
 
 static const char MAPS[][] = {
@@ -179,6 +179,10 @@ public Action VoteMenuCommand(int client, int args)
     menu.AddItem("restart", "投票：从头重开当前战役");
     menu.AddItem("info", "查看下一场战役");
     menu.AddItem("welcome", "欢迎页与公告");
+    menu.AddItem("rain", "娱乐投票：暴雨（本章节不计排行）");
+    menu.AddItem("hats", "娱乐投票：装饰头饰（本章节不计排行）");
+    menu.AddItem("funoff", "娱乐投票：关闭娱乐效果");
+    menu.AddItem("hatmenu", "选择／摘下自己的装饰");
     if (CheckCommandAccess(client, "sm_admin", ADMFLAG_GENERIC)) menu.AddItem("admin", "管理员菜单");
     menu.Display(client, 30);
     return Plugin_Handled;
@@ -192,6 +196,10 @@ public int MainMenuHandler(Menu menu, MenuAction action, int client, int item)
         if (StrEqual(key, "info")) NextMapCommand(client, 0);
         else if (StrEqual(key, "welcome")) WelcomeCommand(client, 0);
         else if (StrEqual(key, "admin")) FakeClientCommand(client, "sm_admin");
+        else if (StrEqual(key, "rain")) StartVote(client, 3, 0);
+        else if (StrEqual(key, "hats")) StartVote(client, 4, 0);
+        else if (StrEqual(key, "funoff")) StartVote(client, 5, 0);
+        else if (StrEqual(key, "hatmenu")) FakeClientCommand(client, "sm_hat");
         else if (StrEqual(key, "restart")) {
             char current[64], prefix[8]; GetCurrentMap(current, sizeof(current));
             int split = FindCharInString(current, 'm');
@@ -239,13 +247,17 @@ void StartVote(int client, int kind, int index)
     }
     int remaining = 60 - (GetTime() - g_LastVote.IntValue);
     if (remaining > 0) { PrintToChat(client, "[交界地] 请等待 %d 秒再发起投票。", remaining); return; }
+    if (kind >= 3 && FindConVar("jjd_fun_mode") == null) { PrintToChat(client,"[交界地] 娱乐插件尚未就绪。"); return; }
     if (index < 0 || index >= sizeof(MAPS) || !IsMapValid(MAPS[index])) return;
     int players[MAXPLAYERS + 1]; g_Electorate = 0;
     for (int i = 1; i <= MaxClients; i++)
         if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) >= 2) players[g_Electorate++] = i;
     g_VoteKind = kind; strcopy(g_VoteMap, sizeof(g_VoteMap), MAPS[index]);
     char title[192];
-    if (kind == 1) Format(title, sizeof(title), "下一场战役改为 %s？", NAMES[index]);
+    if (kind == 3) strcopy(title,sizeof(title),"本章节开启暴雨并停止排行计分？");
+    else if (kind == 4) strcopy(title,sizeof(title),"本章节开启趣味头饰并停止排行计分？");
+    else if (kind == 5) strcopy(title,sizeof(title),"关闭娱乐效果？本章节仍不计排行");
+    else if (kind == 1) Format(title, sizeof(title), "下一场战役改为 %s？", NAMES[index]);
     else if (kind == 2) Format(title, sizeof(title), "清零比分并重开 %s？", NAMES[index]);
     else Format(title, sizeof(title), "立即清零比分并开始 %s？", NAMES[index]);
     g_Vote = CreateBuiltinVote(VoteActionHandler, BuiltinVoteType_Custom_YesNo,
@@ -274,7 +286,13 @@ public void VoteResult(Handle vote, int num_votes, int num_clients, const int[][
         if (item_info[i][BUILTINVOTEINFO_ITEM_INDEX] == BUILTINVOTES_VOTE_YES) yes = item_info[i][BUILTINVOTEINFO_ITEM_VOTES];
     if (yes <= g_Electorate / 2) { DisplayBuiltinVoteFail(vote, BuiltinVoteFail_NotEnoughVotes); return; }
     char message[192];
-    if (g_VoteKind == 1) {
+    if (g_VoteKind >= 3) {
+        if (FindConVar("jjd_fun_mode") == null) { DisplayBuiltinVoteFail(vote,BuiltinVoteFail_Generic); return; }
+        ConVar practice=FindConVar("jjd_stats_practice");if(practice!=null)practice.SetInt(1);
+        if(g_VoteKind==3){ServerCommand("sm_jjd_fun_apply rain");strcopy(message,sizeof(message),"已开启暴雨，本章节不计排行");}
+        else if(g_VoteKind==4){ServerCommand("sm_jjd_fun_apply hats");strcopy(message,sizeof(message),"已开启装饰，输入 !hat 选择");}
+        else{ServerCommand("sm_jjd_fun_apply off");strcopy(message,sizeof(message),"已关闭娱乐效果，本章节仍不计排行");}
+    } else if (g_VoteKind == 1) {
         g_Next.SetString(g_VoteMap);
         Format(message, sizeof(message), "下一场：%s", NAMES[MapIndex(g_VoteMap)]);
     } else {
