@@ -1,0 +1,11 @@
+{
+  "engine_checks": true,
+  "command_directory_and_admin_flags": true,
+  "server_only_commands_excluded": true,
+  "jockey_alive_ghost_tank_cleanup": true,
+  "report_duplicate_guard": true,
+  "report_damage_splits_and_ties": true,
+  "tank_audience_cvar": 0,
+  "admin_conversion_idempotency_validation": true,
+  "human_audio_and_chat_visual_tested": false
+}

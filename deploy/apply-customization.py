@@ -56,3 +56,4 @@ print('CUSTOMIZATION_APPLIED; restart the game when empty. ZoneMod locks plugin 
 subprocess.run(['python3', str(BASE / 'deploy/install-stats.py')], check=True)
 subprocess.run(['python3', str(BASE / 'deploy/install-features.py')], check=True)
 subprocess.run(['python3', str(BASE / 'deploy/install-idle-fix.py')], check=True)
+subprocess.run(['python3', str(BASE / 'deploy/install-player-update.py')], check=True)

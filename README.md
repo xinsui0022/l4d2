@@ -2,6 +2,8 @@
 
 # 交界地 · L4D2 ZoneMod 服务端配置
 
+当前大版本：**v2.0.0**。新增实时命令目录、30 秒路程播报、双方半场 MVP/LVP、待变克名单分队可见、无声猴维护及一键添加管理员。使用和验证说明见 [RELEASE-v2.0.0.md](RELEASE-v2.0.0.md)。
+
 本仓库管理自定义 SourcePawn 插件、欢迎页与 Ubuntu 部署脚本。游戏基础文件、第三方插件整包及任何密码均不放进 Git。
 
 基础：Ubuntu 22.04 x86_64、SourceMod 1.12、ZoneMod 2.9.1b、100 tick、4v4。上游固定提交见 `deploy/fetch-zonemod.sh` 与部署记录。
