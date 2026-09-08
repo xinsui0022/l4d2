@@ -6,7 +6,7 @@ import shutil
 
 base = Path.home()
 sm = base / 'steamcmd/l4d2/left4dead2/addons/sourcemod'
-for name in ('jjd_visuals', 'jjd_fun', 'l4d2_tankrage'):
+for name in ('jjd_visuals', 'jjd_fun', 'l4d2_tankrage', 'jjd_friendly_fire'):
     destination = sm / 'plugins'
     if name == 'l4d2_tankrage':
         destination /= 'optional'
@@ -16,7 +16,7 @@ for name in ('jjd_visuals', 'jjd_fun', 'l4d2_tankrage'):
 
 shared = base / 'steamcmd/l4d2/left4dead2/cfg/sharedplugins.cfg'
 text = shared.read_text()
-for name in ('jjd_visuals', 'jjd_fun'):
+for name in ('jjd_visuals', 'jjd_fun', 'jjd_friendly_fire'):
     line = f'sm plugins load {name}.smx'
     if line not in text:
         text = text.rstrip() + '\n' + line + '\n'
@@ -27,7 +27,7 @@ text = build.read_text()
 match = re.search(r'for plugin in ([^;\n]+);', text)
 assert match, 'Expected the maintained plugin compiler loop'
 names = match.group(1).split()
-for name in ('jjd_visuals', 'jjd_fun', 'l4d2_tankrage'):
+for name in ('jjd_visuals', 'jjd_fun', 'l4d2_tankrage', 'jjd_friendly_fire'):
     if name not in names:
         names.append(name)
 text = text[:match.start(1)] + ' '.join(names) + text[match.end(1):]
