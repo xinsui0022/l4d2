@@ -49,7 +49,7 @@ def run(command):
             try:
                 rid, _, text = receive(sock)
             except (ConnectionError, socket.timeout):
-                if command.split()[0].lower() in {'changelevel', 'map', 'quit', '_restart', 'sm_jjd_idle_check', 'sm_jjd_newcampaign'}:
+                if command.split()[0].lower() in {'changelevel', 'map', 'quit', '_restart', 'sm_jjd_idle_check', 'sm_jjd_idle_restart', 'sm_jjd_newcampaign'}:
                     return ''.join(result) + 'Command sent; server closed the connection. Check status after the map change or shutdown.\n'
                 raise
             if rid == 3:

@@ -12,7 +12,7 @@
 public Plugin myinfo = {
     name = "Jiaojiedi Server Tools", author = "Jiaojiedi server",
     description = "Welcome, campaign votes, fresh matches and idle maintenance",
-    version = "1.1.0", url = ""
+    version = "1.1.1", url = ""
 };
 
 static const char MAPS[][] = {
@@ -29,6 +29,7 @@ static const char NAMES[][] = {
 };
 
 ConVar g_Next, g_Seen, g_LastActive, g_IdleSeconds, g_FreshMap, g_LastVote;
+ConVar g_IdleEpoch;
 Handle g_Vote, g_ChangeTimer;
 int g_VoteKind, g_Electorate;
 char g_VoteMap[64];
@@ -43,11 +44,14 @@ public void OnPluginStart()
     g_IdleSeconds = CreateConVar("jjd_idle_seconds", "1800", "Continuous empty seconds before one restart", 0, true, 60.0);
     g_FreshMap = CreateConVar("jjd_fresh_map", "", "Pending fresh-campaign score reset");
     g_LastVote = CreateConVar("jjd_last_vote", "0", "Last public vote start, Unix seconds");
+    g_IdleEpoch = CreateConVar("jjd_idle_epoch", "0", "Connection activity generation; maintenance token");
+    CreateConVar("jjd_idle_managed", "1", "Keep Confogl loaded; guarded 30-minute maintenance owns empty cleanup");
     RegConsoleCmd("sm_vote", VoteMenuCommand);
     RegConsoleCmd("sm_nextmap", NextMapCommand);
     RegConsoleCmd("sm_welcome", WelcomeCommand);
     RegServerCmd("sm_jjd_status", StatusCommand);
     RegServerCmd("sm_jjd_idle_check", IdleCheckCommand);
+    RegServerCmd("sm_jjd_idle_restart", IdleRestartCommand);
     RegServerCmd("sm_jjd_newcampaign", NewCampaignCommand);
     HookUserMessage(GetUserMessageId("PZEndGamePanelMsg"), EndGameMessage, true);
     TouchActivity();
@@ -71,6 +75,11 @@ public void OnConfigsExecuted()
     // Set through the UTF-8 native: the engine's cfg command parser can strip
     // a wholly non-ASCII hostname on this Linux build.
     FindConVar("hostname").SetString("交界地");
+    // A dedicated public server must also accept a lone infected/spectator.
+    // Confogl's automatic empty unload is disabled by our maintained patch.
+    FindConVar("sv_hibernate_when_empty").SetInt(0);
+    FindConVar("sb_all_bot_game").SetInt(1);
+    FindConVar("allow_all_bot_survivor_team").SetInt(1);
     CreateTimer(2.0, ResetFreshScores, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
@@ -106,6 +115,15 @@ void TouchActivity()
     }
 }
 
+public void OnClientConnected(int client)
+{
+    if (!IsFakeClient(client)) {
+        g_IdleEpoch.IntValue++;
+        g_Seen.IntValue = 1;
+        g_LastActive.IntValue = GetTime();
+    }
+}
+
 public void OnClientPutInServer(int client)
 {
     if (!IsFakeClient(client)) {
@@ -117,6 +135,7 @@ public void OnClientPutInServer(int client)
 public void OnClientDisconnect(int client)
 {
     if (!IsFakeClient(client)) {
+        g_IdleEpoch.IntValue++;
         g_Seen.IntValue = 1;
         g_LastActive.IntValue = GetTime();
     }
@@ -137,9 +156,31 @@ public Action IdleCheckCommand(int args)
     TouchActivity();
     int humans = HumanConnections();
     int idle = GetTime() - g_LastActive.IntValue;
-    PrintToServer("JJD_IDLE humans=%d seen=%d idle=%d threshold=%d", humans, g_Seen.IntValue,
-        g_LastActive.IntValue > 0 ? idle : 0, g_IdleSeconds.IntValue);
+    PrintToServer("JJD_IDLE humans=%d seen=%d idle=%d threshold=%d epoch=%d", humans, g_Seen.IntValue,
+        g_LastActive.IntValue > 0 ? idle : 0, g_IdleSeconds.IntValue, g_IdleEpoch.IntValue);
     // The external wall-clock watcher owns restarts; this command is diagnostic.
+    return Plugin_Handled;
+}
+
+public Action IdleRestartCommand(int args)
+{
+    char token[24]; GetCmdArg(1, token, sizeof(token));
+    TouchActivity();
+    // Check all connected humans, including loading clients and spectators,
+    // in the game thread immediately before quitting. No delayed quit timer.
+    if (args != 1 || StringToInt(token) != g_IdleEpoch.IntValue
+        || HumanConnections() != 0 || !g_Seen.BoolValue
+        || g_LastActive.IntValue <= 0
+        || GetTime() - g_LastActive.IntValue < g_IdleSeconds.IntValue) {
+        PrintToServer("JJD_IDLE_RESTART cancelled");
+        return Plugin_Handled;
+    }
+    LogMessage("JJD_IDLE_RESTART accepted epoch=%d; no connected humans", g_IdleEpoch.IntValue);
+    PrintToServer("JJD_IDLE_RESTART accepted");
+    // systemd Restart=always starts a fresh process. Never use sv_shutdown:
+    // its deferred shutdown can remain armed when a player reconnects.
+    ServerCommand("quit");
+    ServerExecute();
     return Plugin_Handled;
 }
 
