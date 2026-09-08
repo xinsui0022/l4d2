@@ -5,29 +5,30 @@
 #include <sdkhooks>
 #include <left4dhooks>
 
-public Plugin myinfo={name="Jiaojiedi Visual Aids",author="Jiaojiedi",description="Team-filtered outlines and striped Tank forecast barrier",version="1.1.0"};
+public Plugin myinfo={name="Jiaojiedi Visual Aids",author="Jiaojiedi",description="Team-filtered outlines and merged striped Tank forecast barriers",version="1.2.0"};
 ConVar bwEnabled,markerEnabled;
 int glow[MAXPLAYERS+1],forecast=INVALID_ENT_REFERENCE,beamModel;
-ArrayList navs,segments;
+ArrayList navs,segments,stripes;
 float cachedFlow=-1.0,spawnFlow=-1.0,forecastPos[3];
 bool navReady;
 int transmitAllowed[4],transmitBlocked[4],transmitRepairs;
+int mergedBands;
 public void OnPluginStart(){
     bwEnabled=CreateConVar("jjd_bw_blue","1","Blue last-strike outline visible to infected only",0,true,0.0,true,1.0);
     markerEnabled=CreateConVar("jjd_tank_forecast","1","Forecast flow Tank trigger for infected and spectators",0,true,0.0,true,1.0);
-    navs=new ArrayList();segments=new ArrayList(6);
+    navs=new ArrayList();segments=new ArrayList(6);stripes=new ArrayList(6);
     RegConsoleCmd("sm_tankline",LineInfo);RegServerCmd("sm_jjd_visual_status",Status);
     HookEvent("player_team",TeamChanged);
     CreateTimer(0.5,TickGlow,_,TIMER_REPEAT);CreateTimer(1.0,TickMarkers,_,TIMER_REPEAT);
     CreateTimer(0.2,TickStripes,_,TIMER_REPEAT);
 }
-public void OnMapStart(){navReady=false;cachedFlow=-1.0;spawnFlow=-1.0;navs.Clear();segments.Clear();forecast=INVALID_ENT_REFERENCE;for(int c=1;c<=MaxClients;c++)glow[c]=INVALID_ENT_REFERENCE;beamModel=PrecacheModel("materials/sprites/laserbeam.vmt",true);PrecacheModel("models/infected/hulk.mdl",true);}
+public void OnMapStart(){navReady=false;cachedFlow=-1.0;spawnFlow=-1.0;navs.Clear();segments.Clear();stripes.Clear();mergedBands=0;forecast=INVALID_ENT_REFERENCE;for(int c=1;c<=MaxClients;c++)glow[c]=INVALID_ENT_REFERENCE;beamModel=PrecacheModel("materials/sprites/laserbeam.vmt",true);PrecacheModel("models/infected/hulk.mdl",true);}
 public void OnPluginEnd(){for(int c=1;c<=MaxClients;c++)RemoveGlow(c);RemoveForecast();}
 public void OnClientDisconnect(int c){RemoveGlow(c);}
 public void TeamChanged(Event event,const char[] name,bool broadcast){
     // Remove old entity identities when teams change, so a previously allowed
     // client cannot retain a cached glow after becoming a survivor.
-    RemoveForecast();cachedFlow=-1.0;segments.Clear();
+    RemoveForecast();cachedFlow=-1.0;segments.Clear();stripes.Clear();
     for(int c=1;c<=MaxClients;c++)RemoveGlow(c);
     CreateTimer(3.0,Explain,event.GetInt("userid"),TIMER_FLAG_NO_MAPCHANGE);
 }
@@ -82,6 +83,9 @@ void BuildForecast(float threshold,float target){
                 Address next=view_as<Address>(adjacent.Get(j));float otherFlow=L4D2Direct_GetTerrorNavAreaFlow(next);
                 if(otherFlow<threshold||otherFlow>10000000.0||otherFlow<=flow)continue;
                 float other[3],size[3],t=(threshold-flow)/(otherFlow-flow);L4D_GetNavAreaCenter(next,other);L4D_GetNavAreaSize(area,size);
+                // Do not turn jumps between floors or inaccessible nav edges
+                // into free-floating diagonal fragments.
+                if(FloatAbs(other[2]-pos[2])>64.0||L4D_NavArea_IsBlocked(area,2,false)||L4D_NavArea_IsBlocked(next,2,false))continue;
                 float dx=other[0]-pos[0],dy=other[1]-pos[1],length=SquareRoot(dx*dx+dy*dy);if(length<1.0)continue;
                 float width=(direction==0||direction==2)?size[0]:size[1];if(width<32.0)width=32.0;if(width>350.0)width=350.0;
                 float x=pos[0]+t*dx,y=pos[1]+t*dy,z=pos[2]+t*(other[2]-pos[2])+5.0;
@@ -89,6 +93,7 @@ void BuildForecast(float threshold,float target){
             }
         }
     }delete adjacent;
+    BuildStripes();
     if(best>=999999999.0)return;
     int ent=CreateEntityByName("prop_dynamic_override");if(ent==-1)return;
     DispatchKeyValue(ent,"model","models/infected/hulk.mdl");DispatchKeyValue(ent,"solid","0");DispatchSpawn(ent);
@@ -96,6 +101,73 @@ void BuildForecast(float threshold,float target){
     SetEntityRenderMode(ent,RENDER_TRANSCOLOR);SetEntityRenderColor(ent,160,210,255,80);
     SetEntProp(ent,Prop_Send,"m_iGlowType",3);SetEntProp(ent,Prop_Send,"m_glowColorOverride",255<<16|210<<8|160);SetEntProp(ent,Prop_Send,"m_nGlowRange",0);AcceptEntityInput(ent,"StartGlowing");
     SDKHook(ent,SDKHook_SetTransmit,ForecastTransmit);RequireTransmitCheck(ent);forecast=EntIndexToEntRef(ent);
+}
+bool BandsJoin(const float a[6],const float b[6]){
+    return a[0]==b[0]&&FloatAbs(a[1]-b[1])<=64.0&&FloatAbs(a[4]-b[4])<=24.0
+        &&a[2]<=b[3]+24.0&&b[2]<=a[3]+24.0;
+}
+void JoinBand(float a[6],const float b[6]){
+    float total=a[5]+b[5];a[1]=(a[1]*a[5]+b[1]*b[5])/total;
+    a[4]=(a[4]*a[5]+b[4]*b[5])/total;a[5]=total;
+    if(b[2]<a[2])a[2]=b[2];if(b[3]>a[3])a[3]=b[3];
+}
+public bool GroundOnly(int entity,int mask,any data){return entity==0;}
+void BuildStripes(){
+    stripes.Clear();ArrayList bands=new ArrayList(6);
+    float line[6],band[6],other[6];
+    // Project neighboring fragments onto a common corridor plane. A canonical
+    // direction and world-anchored stripe phase prevent X shapes and phase jumps.
+    for(int i=0;i<segments.Length;i++){
+        segments.GetArray(i,line,6);float dx=line[3]-line[0],dy=line[4]-line[1];
+        if(dx<0.0||(FloatAbs(dx)<0.001&&dy<0.0)){dx=-dx;dy=-dy;}
+        // Nav centers are irregular even in a straight corridor. Choose the
+        // dominant local corridor axis, not each pair of nav centers' angle.
+        float alongX,alongY,neighbor[6];
+        float centerX=(line[0]+line[3])*0.5,centerY=(line[1]+line[4])*0.5,centerZ=(line[2]+line[5])*0.5;
+        for(int n=0;n<segments.Length;n++){
+            segments.GetArray(n,neighbor,6);float nx=(neighbor[0]+neighbor[3])*0.5-centerX,ny=(neighbor[1]+neighbor[4])*0.5-centerY;
+            if(nx*nx+ny*ny>384.0*384.0||FloatAbs((neighbor[2]+neighbor[5])*0.5-centerZ)>24.0)continue;
+            float wx=FloatAbs(neighbor[3]-neighbor[0]),wy=FloatAbs(neighbor[4]-neighbor[1]);
+            if(wx>=wy)alongX+=wx;else alongY+=wy;
+        }
+        int sector=alongX>=alongY?0:6;float radians=DegToRad(float(sector)*15.0);
+        float ux=Cosine(radians),uy=Sine(radians);
+        float low=line[0]*ux+line[1]*uy,high=line[3]*ux+line[4]*uy;
+        if(low>high){float swap=low;low=high;high=swap;}
+        if(high-low<16.0)continue;
+        band[0]=float(sector);band[1]=((line[0]+line[3])*(-uy)+(line[1]+line[4])*ux)*0.5;
+        band[2]=low;band[3]=high;band[4]=(line[2]+line[5])*0.5;band[5]=high-low;
+        bool joined;
+        for(int j=0;j<bands.Length;j++){bands.GetArray(j,other,6);if(BandsJoin(other,band)){JoinBand(other,band);bands.SetArray(j,other,6);joined=true;break;}}
+        if(!joined)bands.PushArray(band,6);
+    }
+    // A new fragment can bridge two previously separate groups.
+    bool changed=true;
+    while(changed){changed=false;for(int i=0;i<bands.Length&&!changed;i++){bands.GetArray(i,band,6);for(int j=i+1;j<bands.Length;j++){bands.GetArray(j,other,6);if(BandsJoin(band,other)){JoinBand(band,other);bands.SetArray(i,band,6);bands.Erase(j);changed=true;break;}}}}
+    mergedBands=0;
+    for(int i=0;i<bands.Length&&stripes.Length<256;i++){
+        bands.GetArray(i,band,6);if(band[3]-band[2]<48.0)continue;
+        float radians=DegToRad(band[0]*15.0),ux=Cosine(radians),uy=Sine(radians);
+        int before=stripes.Length;
+        for(float x=float(RoundToFloor(band[2]/32.0))*32.0-32.0;x<band[3]&&stripes.Length<256;x+=32.0){
+            float left=x<band[2]?band[2]:x,right=x+40.0>band[3]?band[3]:x+40.0;
+            if(right-left<16.0)continue;
+            float start[3],end[3],hit[3],center=(left+right)*0.5;
+            start[0]=center*ux-band[1]*uy;start[1]=center*uy+band[1]*ux;start[2]=band[4]+40.0;
+            end=start;end[2]=band[4]-56.0;
+            Handle trace=TR_TraceRayFilterEx(start,end,MASK_PLAYERSOLID,RayType_EndPoint,GroundOnly);
+            bool grounded=TR_DidHit(trace);if(grounded)TR_GetEndPosition(hit,trace);delete trace;
+            if(!grounded||FloatAbs(hit[2]-(band[4]-5.0))>24.0)continue;
+            // One common base height per band, with thinner 48-unit slashes.
+            line[0]=left*ux-band[1]*uy;line[1]=left*uy+band[1]*ux;
+            line[2]=band[4]+48.0*(1.0-(left-x)/40.0);
+            line[3]=right*ux-band[1]*uy;line[4]=right*uy+band[1]*ux;
+            line[5]=band[4]+48.0*(1.0-(right-x)/40.0);
+            stripes.PushArray(line,6);
+        }
+        if(stripes.Length>before)mergedBands++;
+    }
+    delete bands;
 }
 public Action TickMarkers(Handle timer){
     if(!navReady){L4D_GetAllNavAreas(navs);navReady=navs.Length>0;}
@@ -111,26 +183,16 @@ public Action TickStripes(Handle timer){
     int clients[MAXPLAYERS+1],count;for(int c=1;c<=MaxClients;c++)if(ForecastAudience(c)&&!IsFakeClient(c))clients[count++]=c;
     if(!count)return Plugin_Continue;
     float line[6],a[3],b[3],middle[3],eye[3];int white[4]={255,255,255,220};int drawn;
-    for(int i=0;i<segments.Length&&drawn<128;i++){
-        segments.GetArray(i,line,6);float dx=line[3]-line[0],dy=line[4]-line[1];
-        float length=SquareRoot(dx*dx+dy*dy);if(length<1.0)continue;
+    for(int i=0;i<stripes.Length&&drawn<128;i++){
+        stripes.GetArray(i,line,6);
         for(int k=0;k<3;k++)middle[k]=(line[k]+line[k+3])*0.5;
         int nearby[MAXPLAYERS+1],nearCount;
         for(int j=0;j<count;j++){GetClientEyePosition(clients[j],eye);if(GetVectorDistance(eye,middle)<3000.0)nearby[nearCount++]=clients[j];}
         if(!nearCount)continue;
-        // A vertical, diagonally striped fence: 64 units high, 48 units tilt,
-        // 40 units pitch. End stripes are clipped to the nav boundary width.
-        for(float x=-40.0;x<length&&drawn<128;x+=40.0){
-            float left=x<0.0?0.0:x,right=x+48.0>length?length:x+48.0;
-            if(right<=left)continue;
-            for(int k=0;k<3;k++){a[k]=line[k]+(line[k+3]-line[k])*left/length;b[k]=line[k]+(line[k+3]-line[k])*right/length;}
-            a[2]+=64.0*(1.0-(left-x)/48.0);b[2]+=64.0*(1.0-(right-x)/48.0);
-            // Short-lived recipient-only effects avoid persistent team-switch
-            // remnants. Never broadcast these temp entities to all clients.
-            TE_SetupBeamPoints(a,b,beamModel,0,0,0,0.22,5.0,5.0,0,0.0,white,0);TE_Send(nearby,nearCount);drawn++;
-        }
+        for(int k=0;k<3;k++){a[k]=line[k];b[k]=line[k+3];}
+        TE_SetupBeamPoints(a,b,beamModel,0,0,0,0.22,2.5,2.5,0,0.0,white,0);TE_Send(nearby,nearCount);drawn++;
     }
     return Plugin_Continue;
 }
 public Action LineInfo(int c,int args){if(c>0&&IsClientInGame(c)){if(GetClientTeam(c)==2)ReplyToCommand(c,"[交界地] Tank 预览仅对感染者和旁观者显示。");else if(cachedFlow>0.0)ReplyToCommand(c,"[交界地] 白线为预计流程触发边界；蓝色 Tank 模型仅表示预测区域，最终坐标由导演决定。剧情/救援 Tank 不适用。");else ReplyToCommand(c,"[交界地] 当前没有可预测的流程 Tank；剧情/救援 Tank 或已刷出的 Tank 不显示预览。");}return Plugin_Handled;}
-public Action Status(int args){int count;for(int c=1;c<=MaxClients;c++)if(EntRefToEntIndex(glow[c])>MaxClients)count++;int ent=EntRefToEntIndex(forecast);PrintToServer("JJD_VISUAL blue=%d proxies=%d markers=%d navs=%d segments=%d trigger_flow=%.1f spawn_flow=%.1f flags=%d repairs=%d survivor_allowed=%d survivor_blocked=%d",bwEnabled.BoolValue,count,markerEnabled.BoolValue,navs.Length,segments.Length,cachedFlow,spawnFlow,ent>MaxClients?GetEdictFlags(ent):-1,transmitRepairs,transmitAllowed[2],transmitBlocked[2]);return Plugin_Handled;}
+public Action Status(int args){int count;for(int c=1;c<=MaxClients;c++)if(EntRefToEntIndex(glow[c])>MaxClients)count++;int ent=EntRefToEntIndex(forecast);PrintToServer("JJD_VISUAL blue=%d proxies=%d markers=%d navs=%d segments=%d bands=%d stripes=%d trigger_flow=%.1f spawn_flow=%.1f flags=%d repairs=%d survivor_allowed=%d survivor_blocked=%d",bwEnabled.BoolValue,count,markerEnabled.BoolValue,navs.Length,segments.Length,mergedBands,stripes.Length,cachedFlow,spawnFlow,ent>MaxClients?GetEdictFlags(ent):-1,transmitRepairs,transmitAllowed[2],transmitBlocked[2]);return Plugin_Handled;}
