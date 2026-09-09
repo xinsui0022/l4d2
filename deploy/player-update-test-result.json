@@ -7,5 +7,8 @@
   "report_damage_splits_and_ties": true,
   "tank_audience_cvar": 0,
   "admin_conversion_idempotency_validation": true,
-  "human_audio_and_chat_visual_tested": false
+  "human_audio_and_chat_visual_tested": false,
+  "old_mvp_auto_disabled": true,
+  "progress_interval": 30,
+  "round_report_enabled": true
 }

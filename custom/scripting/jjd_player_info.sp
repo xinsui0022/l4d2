@@ -7,7 +7,7 @@
 #include <readyup>
 #include <pause>
 
-public Plugin myinfo = {name="Jiaojiedi Player Info", author="Jiaojiedi", description="Live command directory and periodic progress", version="1.0.0"};
+public Plugin myinfo = {name="Jiaojiedi Player Info", author="Jiaojiedi", description="Live command directory and periodic progress", version="1.0.1"};
 ConVar interval;
 bool live;
 float nextReport;
@@ -32,7 +32,10 @@ public void OnRoundIsLive() { live = true; nextReport = GetGameTime() + interval
 bool Human(int c) { return c > 0 && IsClientInGame(c) && !IsFakeClient(c); }
 public Action Notice(Handle timer)
 {
-    for (int c=1;c<=MaxClients;c++) if (Human(c)) PrintToChat(c, "[交界地公告] 输入 !commands 查询全部可用命令；!progress 查看路程；!roundstats 查看双方本半场数据。");
+    for (int c=1;c<=MaxClients;c++) if (Human(c)) {
+        PrintToChat(c, "[交界地公告] 服务器维护者:QQ 3389141");
+        PrintToChat(c, "[交界地公告] !commands 全部命令；!progress 路程；!roundstats 双方本半场数据。");
+    }
     return Plugin_Continue;
 }
 public Action Tick(Handle timer)

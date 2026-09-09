@@ -35,14 +35,18 @@ assert n == 1, 'Tank audience setting changed upstream; inspect before deploymen
 config.write_text(text)
 config = game / 'cfg/cfgogl/zonemod/zonemod.cfg'
 text = config.read_text()
+settings_anchor = 'exec cfgogl/zonemod/shared_settings.cfg'
+assert text.count(settings_anchor) == 1, 'Expected ZoneMod shared settings include'
+player_settings = []
 for name, value in (('jjd_progress_interval', '30'), ('jjd_round_report', '1'),
                     ('sm_survivor_mvp_enabled', '0'), ('sm_stats_autoprint_vs_round', '8324')):
     # Keep the detailed console tables; the maintained Chinese summary owns automatic chat.
     pattern = rf'(?m)^confogl_addcvar {name}\s+[^\n]+'
     line = f'confogl_addcvar {name} {value}'
-    if re.search(pattern, text):
-        text = re.sub(pattern, line, text)
-    else:
-        text = text.rstrip() + '\n' + line + '\n'
+    text = re.sub(pattern + r'\n?', '', text)
+    player_settings.append(line)
+# shared_settings.cfg executes confogl_setcvars, which rejects later additions.
+# Register all maintained cvars BEFORE that include, including on repeated installs.
+text = text.replace(settings_anchor, '\n'.join(player_settings) + '\n' + settings_anchor)
 config.write_text(text)
 print('PLAYER_UPDATE_INSTALLED; restart only while empty')

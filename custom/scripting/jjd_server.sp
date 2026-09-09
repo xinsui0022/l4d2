@@ -12,7 +12,7 @@
 public Plugin myinfo = {
     name = "Jiaojiedi Server Tools", author = "Jiaojiedi server",
     description = "Welcome, campaign votes, fresh matches and idle maintenance",
-    version = "1.2.0", url = ""
+    version = "1.2.1", url = ""
 };
 
 static const char MAPS[][] = {
@@ -145,7 +145,7 @@ public Action WelcomeChat(Handle timer, any userid)
 {
     int client = GetClientOfUserId(userid);
     if (client && IsClientInGame(client)) {
-        PrintToChat(client, "\x04[交界地]\x01 本服务器由五郎、心碎提供");
+        PrintToChat(client, "\x04[交界地]\x01 服务器维护者:QQ 3389141");
         PrintToChat(client, "\x04[交界地]\x01 !commands 全部命令 | !vote 投票菜单 | !welcome 公告");
     }
     return Plugin_Stop;

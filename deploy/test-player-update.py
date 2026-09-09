@@ -128,6 +128,9 @@ try:
     assert '[生还 LVP] 无友伤，无人上榜。' in logs
     assert '[MVP]InfectedB：输出 140' in logs
     assert '"0"' in rcon('tankcontrol_print_all')
+    assert '"0"' in rcon('sm_survivor_mvp_enabled')
+    assert '"30"' in rcon('jjd_progress_interval')
+    assert '"1"' in rcon('jjd_round_report')
     spec=importlib.util.spec_from_file_location('admin',b/'deploy/add-admin.py');admin=importlib.util.module_from_spec(spec);spec.loader.exec_module(admin)
     value='https://steamcommunity.com/profiles/76561199191371037/'
     assert admin.steam_identity(value)[1]=='STEAM_1:1:615552654'
@@ -141,6 +144,7 @@ try:
     result={'engine_checks':True,'command_directory_and_admin_flags':True,'server_only_commands_excluded':True,
       'jockey_alive_ghost_tank_cleanup':True,'report_duplicate_guard':True,'report_damage_splits_and_ties':True,
       'tank_audience_cvar':0,'admin_conversion_idempotency_validation':True,
+      'old_mvp_auto_disabled':True,'progress_interval':30,'round_report_enabled':True,
       'human_audio_and_chat_visual_tested':False}
     (b/'deploy/player-update-test-result.json').write_text(json.dumps(result,indent=2))
     print(json.dumps(result),flush=True)
