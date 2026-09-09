@@ -1,20 +1,20 @@
 # 交界地：公开可发现方案与到期迁移
 
-2026-09-09，方案文档；本次只部署维护者公告与配置修正，尚未应用下述公开化配置建议。
+2026-09-09，v2.0.2 已实施公开配置，并通过空服重启、外网查询与 Steam 收录验证。真人客户端列表查找和加入仍待验证。
 
 ## 已核查的状态
 
-- Steam 官方 `ISteamApps/GetServersAtAddress/v0001` 查询已返回本服：appid=550、secure=true、lan=false、region=255。说明已被 Steam 主服务器收录。
-- 从管理员电脑的外网发起 A2S_INFO 查询成功：服名“交界地”、8 人位、无密码、VAC 开启。
+- Steam 官方 `ISteamApps/GetServersAtAddress/v0001` 查询已返回本服：appid=550、secure=true、lan=false、region=4。说明已被 Steam 主服务器收录。
+- 从管理员电脑的外网发起 A2S_INFO 查询成功：服名“[CN] 交界地 | ZoneMod药抗4v4 | 测试服”、8 人位、无密码、VAC 开启。
 - `sv_lan=0`、`sv_allow_lobby_connect_only=0`、`sv_steamgroup_exclusive=0`。
-- `sv_search_key` 当前非空，是本服专用大厅匹配键；`sv_tags` 当前为 `confogl,gravity`；`sv_steamgroup` 为空。
+- `sv_search_key` 已清空；`sv_tags` 为 `gravity,jiaojiedi,test,versus,zonemod,confogl`；`sv_steamgroup` 为空。
 - 主服务器收录、外网查询、真实客户端列表刷新/筛选、多人连接分别是不同验证步骤。前两项通过；尚未在一个陌生玩家的客户端验证列表展示和加入。
 
 ## 建议路线
 
 第一阶段先做好 `openserverbrowser` 的 Internet/互联网列表，最符合“不用预先知道 IP，能按服名找到并加入测试”的目标。保留竞技模式和真实人数，清楚标注测试服。
 
-建议对主配置与配置生成器同时维护以下值（供实施时使用，本次未应用）：
+主配置、配置生成器与更新脚本现已共同维护以下值，插件中的 UTF-8 服名设置也已同步修正：
 
 ```cfg
 hostname "[CN] 交界地 | ZoneMod药抗4v4 | 测试服"
@@ -24,15 +24,16 @@ sv_allow_lobby_connect_only 0
 sv_steamgroup_exclusive 0
 sv_region 4
 sv_tags "jiaojiedi,zonemod,versus,test"
+sv_search_key ""
 ```
 
-地域 4 对应亚洲，当前 255 是不限地域；实施时核对当前引擎值和客户端筛选。模式可能自动追加 `confogl` 等标签，应保留这些真实标记。修改 `hostname` 时也要调整 `apply-customization.py`，否则下次应用配置会恢复旧服名。
+地域 4 对应亚洲，已核对引擎和 Steam API 均为 4。模式自动追加 `confogl` 等真实标签。`public_settings.py` 在安装和更新时统一维护配置；插件的 UTF-8 服名必须保持一致。
 
 保持现有 UDP 27015 的外网游戏/查询连通及 Steam 出站连接。公网 TCP 27015 的 RCON 不是浏览列表所需；管理仍走 SSH。无需为了被搜到而关闭 VAC，也不需要安装伪造人数或刷列表插件。
 
 验收：用另一网络、未收藏本服的正版客户端打开控制台，输入 `openserverbrowser`；选 Internet/互联网，游戏为 Left 4 Dead 2，允许空服、放宽延迟限制，取消不合适的地图/密码/区域过滤。按服名查找“交界地”，或在支持标签过滤的界面用 `jiaojiedi`，并尝试实际加入。不应把“收藏中通过 IP 添加成功”当作公开列表验收。
 
-第二阶段如希望陌生大厅也自动匹配进来，再清空 `sv_search_key`，测试“最佳可用专用服务器”。非空键限制大厅选择与浏览列表收录是不同机制。ZoneMod 是修改模式，玩家的模式、延迟、标签及大厅条件都会影响匹配，清空键不能保证随机匹配流量，也不会变成 Valve 官方服务器。
+已按授权清空 `sv_search_key`，可进一步测试“最佳可用专用服务器”。非空键限制大厅选择与浏览列表收录是不同机制。ZoneMod 是修改模式，玩家的模式、延迟、标签及大厅条件都会影响匹配，清空键不能保证随机匹配流量，也不会变成 Valve 官方服务器。
 
 第三阶段可创建自己的 Steam 社区组并关联 `sv_steamgroup`，保留 `sv_steamgroup_exclusive=0`。这能为组员提供另一个入口，并不保证所有陌生人的游戏主页都会显示本服。需要先有真实的组 ID，不能随意填写他人组。
 

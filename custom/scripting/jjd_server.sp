@@ -74,7 +74,7 @@ public void OnConfigsExecuted()
 {
     // Set through the UTF-8 native: the engine's cfg command parser can strip
     // a wholly non-ASCII hostname on this Linux build.
-    FindConVar("hostname").SetString("交界地");
+    FindConVar("hostname").SetString("[CN] 交界地 | ZoneMod药抗4v4 | 测试服");
     // A dedicated public server must also accept a lone infected/spectator.
     // Confogl's automatic empty unload is disabled by our maintained patch.
     FindConVar("sv_hibernate_when_empty").SetInt(0);

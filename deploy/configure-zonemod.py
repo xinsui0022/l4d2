@@ -6,6 +6,7 @@ import re
 import secrets
 import shutil
 import subprocess
+from public_settings import configure_public
 
 base = Path('/home/l4d2')
 source = base / 'l4d2-mod'
@@ -38,7 +39,7 @@ sm_cvar confogl_match_autoload 1
 sm_cvar confogl_match_autoconfig "zonemod"
 exec private_server.cfg
 '''
-(target / 'cfg/server.cfg').write_text(cfg)
+(target / 'cfg/server.cfg').write_text(configure_public(cfg))
 secret = target / 'cfg/private_server.cfg'
 if not secret.exists():
     secret.write_text('rcon_password "' + secrets.token_hex(24) + '"\n')

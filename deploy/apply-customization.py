@@ -4,15 +4,13 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+from public_settings import apply_public_settings
 
 BASE = Path('/home/l4d2')
 GAME = BASE / 'steamcmd/l4d2/left4dead2'
 SM = GAME / 'addons/sourcemod'
 cfg = GAME / 'cfg/server.cfg'
-text = cfg.read_text()
-text, count = re.subn(r'^hostname\s+[^\n]*', 'hostname "交界地"', text, flags=re.M)
-assert count == 1
-cfg.write_text(text)
+apply_public_settings(cfg)
 (GAME / 'mymotd.txt').write_text('http://YOUR_SERVER_IP/l4d2/welcome.html\n')
 (GAME / 'myhost.txt').write_text('http://YOUR_SERVER_IP/l4d2/banner.html\n')
 
@@ -57,3 +55,5 @@ subprocess.run(['python3', str(BASE / 'deploy/install-stats.py')], check=True)
 subprocess.run(['python3', str(BASE / 'deploy/install-features.py')], check=True)
 subprocess.run(['python3', str(BASE / 'deploy/install-idle-fix.py')], check=True)
 subprocess.run(['python3', str(BASE / 'deploy/install-player-update.py')], check=True)
+
+subprocess.run(['python3', str(BASE / 'deploy/install-join-info.py')], check=True)

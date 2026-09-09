@@ -17,7 +17,7 @@ out['custom_plugin'] = next(line.strip() for line in plugins.splitlines() if 'Ji
 assert '<Failed>' not in plugins and '<Error>' not in plugins
 assert 'admin_root=1' in out['sm_jjd_status'] and 'idle_seconds=1800' in out['sm_jjd_status']
 assert 'ZoneMod' in out['sm_cvar l4d_ready_cfg_name']
-assert 'hostname: 交界地' in out['status']
+assert 'hostname: [CN] 交界地 | ZoneMod药抗4v4 | 测试服' in out['status']
 for name in ('welcome.html', 'banner.html', 'wallpaper.png'):
     with urllib.request.urlopen('http://127.0.0.1/l4d2/' + name, timeout=5) as response:
         data = response.read()
