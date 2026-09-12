@@ -24,7 +24,7 @@ if marker not in text:
 sdk = base/'l4d2-mod/addons/sourcemod/scripting'
 main = source/'confoglcompmod.sp'
 main_text = main.read_text()
-if '"2.5.0-jjd1"' not in main_text:
+if not any(version in main_text for version in ('"2.5.0-jjd1"', '"2.5.0-jjd2"')):
     assert '"2.5.0"' in main_text, 'Upstream version changed; review the patch'
     main.write_text(main_text.replace('"2.5.0"', '"2.5.0-jjd1"', 1))
 subprocess.run([str(sdk/'sourcemod/spcomp'), str(source/'confoglcompmod.sp'),

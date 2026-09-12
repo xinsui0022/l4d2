@@ -4,13 +4,13 @@ import re
 from pathlib import Path
 
 SETTINGS = {
-    'hostname': '"[CN] 交界地 | ZoneMod药抗4v4 | 测试服"',
+    'hostname': '"[CN] 纯净药抗"',
     'sv_lan': '0',
     'sv_password': '""',
     'sv_allow_lobby_connect_only': '0',
     'sv_steamgroup_exclusive': '0',
     'sv_region': '4',
-    'sv_tags': '"jiaojiedi,zonemod,versus,test"',
+    'sv_tags': '"jiaojiedi,zonemod,versus"',
     'sv_search_key': '""',
 }
 

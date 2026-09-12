@@ -21,18 +21,18 @@ for filename in ('host.txt', 'motd.txt', 'myhost.txt', 'mymotd.txt'):
 
 cfg = (source / 'cfg/server.cfg').read_text()
 changes = {
-    'hostname': '"l4d2 | ZoneMod 2.9.1b | 4v4"',
+    'hostname': '"[CN] 纯净药抗"',
     'rcon_password': '""',
     'sv_steamgroup': '""',
-    'sv_search_key': '"l4d2_zonemod"',
+    'sv_search_key': '"xinsui_zonemod"',
     'sv_steamgroup_exclusive': '"0"',
 }
 for key, value in changes.items():
     cfg, count = re.subn(r'^' + re.escape(key) + r'\s+[^\n]*', key + ' ' + value, cfg, flags=re.M)
     assert count == 1, (key, count)
-cfg = re.sub(r'^sm_cvar mv_maxplayers\s+[^\n]*', 'sm_cvar mv_maxplayers 8', cfg, flags=re.M)
+cfg = re.sub(r'^sm_cvar mv_maxplayers\s+[^\n]*', 'sm_cvar mv_maxplayers 12', cfg, flags=re.M)
 cfg += '''
-// l4d2 MVP: use the official ZoneMod rules and auto-load on connection.
+// Xinsui MVP: use the official ZoneMod rules and auto-load on connection.
 sv_lan 0
 sv_password ""
 sm_cvar confogl_match_autoload 1
@@ -50,8 +50,8 @@ for optional_cfg in ('confogl_rates.cfg', 'confogl_personalize.cfg'):
     path = target / 'cfg' / optional_cfg
     if not path.exists():
         path.write_text('// Optional local overrides; rates are set in server.cfg.\n')
-(target / 'myhost.txt').write_text('l4d2 ZoneMod 4v4\n')
-(target / 'mymotd.txt').write_text('l4d2 ZoneMod 2.9.1b | 4v4\nReady: !ready | Unready: !unready | Pause: !pause | Spectate: !spec\n')
+(target / 'myhost.txt').write_text('Xinsui ZoneMod 4v4\n')
+(target / 'mymotd.txt').write_text('Xinsui ZoneMod 2.9.1b | 4v4\nReady: !ready | Unready: !unready | Pause: !pause | Spectate: !spec\n')
 for binary in (game / 'srcds_run', game / 'srcds_linux'):
     binary.chmod(binary.stat().st_mode | 0o100)
 sdk = base / '.steam/sdk32'

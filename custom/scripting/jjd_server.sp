@@ -10,9 +10,9 @@
 #define ADMIN_ID "STEAM_1:0:YOUR_ACCOUNT_ID"
 
 public Plugin myinfo = {
-    name = "Jiaojiedi Server Tools", author = "Jiaojiedi server",
+    name = "Jiaojiedi Server Tools", author = "Xinsui server",
     description = "Welcome, campaign votes, fresh matches and idle maintenance",
-    version = "1.2.1", url = ""
+    version = "1.3.0", url = ""
 };
 
 static const char MAPS[][] = {
@@ -74,7 +74,7 @@ public void OnConfigsExecuted()
 {
     // Set through the UTF-8 native: the engine's cfg command parser can strip
     // a wholly non-ASCII hostname on this Linux build.
-    FindConVar("hostname").SetString("[CN] 交界地 | ZoneMod药抗4v4 | 测试服");
+    FindConVar("hostname").SetString("[CN] 纯净药抗");
     // A dedicated public server must also accept a lone infected/spectator.
     // Confogl's automatic empty unload is disabled by our maintained patch.
     FindConVar("sv_hibernate_when_empty").SetInt(0);
@@ -215,6 +215,7 @@ public Action VoteMenuCommand(int client, int args)
     if (!client || !IsClientInGame(client)) return Plugin_Handled;
     Menu menu = new Menu(MainMenuHandler);
     menu.SetTitle("交界地 · 投票菜单");
+    menu.AddItem("mode", "投票：切换 1V1 / 2V2 / 3V3 / 4V4");
     menu.AddItem("now", "投票：立即开始指定战役");
     menu.AddItem("next", "投票：选择打完后的下一场战役");
     menu.AddItem("restart", "投票：从头重开当前战役");
@@ -235,6 +236,16 @@ public int MainMenuHandler(Menu menu, MenuAction action, int client, int item)
     else if (action == MenuAction_Select) {
         char key[16]; menu.GetItem(item, key, sizeof(key));
         if (StrEqual(key, "info")) NextMapCommand(client, 0);
+        else if (StrEqual(key, "mode")) {
+            Menu modes = new Menu(ModeMenuHandler);
+            modes.SetTitle("切换对抗模式（通过后重开当前地图）");
+            modes.AddItem("zm1v1", "1V1 ZoneMod");
+            modes.AddItem("zm2v2", "2V2 ZoneMod");
+            modes.AddItem("zm3v3", "3V3 ZoneMod");
+            modes.AddItem("zonemod", "4V4 ZoneMod（默认）");
+            modes.ExitBackButton = true;
+            modes.Display(client, 30);
+        }
         else if (StrEqual(key, "welcome")) WelcomeCommand(client, 0);
         else if (StrEqual(key, "admin")) FakeClientCommand(client, "sm_admin");
         else if (StrEqual(key, "rain")) StartVote(client, 3, 0);
@@ -263,6 +274,25 @@ public int MainMenuHandler(Menu menu, MenuAction action, int client, int item)
             }
             maps.Display(client, 30);
         }
+    }
+    return 0;
+}
+
+public int ModeMenuHandler(Menu menu, MenuAction action, int client, int item)
+{
+    if (action == MenuAction_End) delete menu;
+    else if (action == MenuAction_Cancel && item == MenuCancel_ExitBack) VoteMenuCommand(client, 0);
+    else if (action == MenuAction_Select) {
+        if (!IsClientInGame(client)) return 0;
+        if (g_FinaleQueued || g_ChangeTimer != null) {
+            PrintToChat(client, "[交界地] 即将换图，请稍后切换模式。");
+            return 0;
+        }
+        char mode[16]; menu.GetItem(item, mode, sizeof(mode));
+        // Reuse Match Vote's electorate, spectator checks and yes/no ballot.
+        if (StrEqual(mode, "zm1v1") || StrEqual(mode, "zm2v2")
+            || StrEqual(mode, "zm3v3") || StrEqual(mode, "zonemod"))
+            FakeClientCommand(client, "sm_chmatch %s", mode);
     }
     return 0;
 }

@@ -1,12 +1,12 @@
 > 本公开仓库使用脱敏模板。首次部署前请替换 YOUR_SERVER_IP、YOUR_STEAM64、YOUR_ACCOUNT_ID，并核对 Linux 用户与路径；实际服务器配置和恢复包保留在私有本地目录。
 
-# 交界地 · L4D2 ZoneMod 服务端配置
+# 纯净药抗 · L4D2 ZoneMod 服务端配置
 
-当前大版本：**v2.0.0**，维护更新 **v2.0.1**。新增实时命令目录、30 秒路程播报、双方半场 MVP/LVP、待变克名单分队可见、无声猴维护及一键添加管理员。使用和验证说明见 [RELEASE-v2.0.0.md](RELEASE-v2.0.0.md)。v2.0.1 更新维护者公告并修正结算配置加载顺序，公开发现和到期迁移见 [PUBLIC-SERVER-PLAN.md](PUBLIC-SERVER-PLAN.md)。
+当前正式版本：**v2.1.0**。服务器名称为 `[CN] 纯净药抗`，游戏栏为 `Zonemod药抗&单练`，官方地图显示中文战役名和章节进度。保留 ZoneMod 药抗、小人数切换及现有功能，更新与验证说明见 [RELEASE-v2.1.0.md](RELEASE-v2.1.0.md)。
 
 本仓库管理自定义 SourcePawn 插件、欢迎页与 Ubuntu 部署脚本。游戏基础文件、第三方插件整包及任何密码均不放进 Git。
 
-基础：Ubuntu 22.04 x86_64、SourceMod 1.12、ZoneMod 2.9.1b、100 tick、4v4。上游固定提交见 `deploy/fetch-zonemod.sh` 与部署记录。
+当前部署环境：Ubuntu 24.04 x86_64、SourceMod 1.12、ZoneMod 2.9.1b、100 tick、默认 4v4，总容量 12（含旁观）。上游固定提交见 `deploy/fetch-zonemod.sh` 与部署记录。
 
 自定义功能：
 - C2 默认启动图；整场结束默认开启 C5 新局并清零比分。

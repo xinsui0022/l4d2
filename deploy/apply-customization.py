@@ -57,3 +57,4 @@ subprocess.run(['python3', str(BASE / 'deploy/install-idle-fix.py')], check=True
 subprocess.run(['python3', str(BASE / 'deploy/install-player-update.py')], check=True)
 
 subprocess.run(['python3', str(BASE / 'deploy/install-join-info.py')], check=True)
+subprocess.run(['python3', str(BASE / 'deploy/install-official.py')], check=True)

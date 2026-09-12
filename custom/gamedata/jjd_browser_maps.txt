@@ -1,0 +1,21 @@
+"Games"
+{
+    "left4dead2"
+    {
+        "Signatures"
+        {
+            "Steam3Server"
+            {
+                "library" "engine"
+                "linux" "@_Z12Steam3Serverv"
+            }
+        }
+        "Offsets"
+        {
+            "SetMapName"
+            {
+                "linux" "15"
+            }
+        }
+    }
+}

@@ -1,0 +1,24 @@
+"Games"
+{
+    "left4dead2"
+    {
+        "Signatures"
+        {
+            "GetGameDescription"
+            {
+                "library" "server"
+                "linux" "@_Z18GetGameDescriptionv"
+            }
+        }
+        "Functions"
+        {
+            "GetGameDescription"
+            {
+                "signature" "GetGameDescription"
+                "callconv" "cdecl"
+                "return" "charptr"
+                "this" "ignore"
+            }
+        }
+    }
+}

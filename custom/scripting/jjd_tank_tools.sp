@@ -7,7 +7,7 @@
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
 
-public Plugin myinfo = {name="Jiaojiedi Tank Tools", author="Jiaojiedi", description="Opening tank handoff and root-only practice tools", version="1.1.1"};
+public Plugin myinfo = {name="Jiaojiedi Tank Tools", author="Xinsui server", description="Opening tank handoff and root-only practice tools", version="1.1.1"};
 float deadline[MAXPLAYERS+1];
 bool offered[MAXPLAYERS+1], spent[MAXPLAYERS+1], passing;
 TopMenu adminMenu;
